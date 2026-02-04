@@ -70,6 +70,16 @@ export const getAvailableStyles = () => [
 export const getAvailablePalettes = () => Object.keys(colorPalettes);
 
 /**
+ * Unicode-safe Base64 encoding for SVG data URLs
+ */
+const unicodeSafeBase64 = (str) => {
+  // Use UTF-8 encoding to handle all Unicode characters
+  return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => {
+    return String.fromCharCode('0x' + p1);
+  }));
+};
+
+/**
  * Utility function to generate avatar URL (for compatibility with existing code)
  * Creates a simple initials-based SVG as data URL
  */
@@ -84,7 +94,7 @@ export const generateBoringAvatarUrl = (seed, size = 64) => {
     </text>
   </svg>`;
   
-  return `data:image/svg+xml;base64,${btoa(svg)}`;
+  return `data:image/svg+xml;base64,${unicodeSafeBase64(svg)}`;
 };
 
 /**

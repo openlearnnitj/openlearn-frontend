@@ -22,7 +22,11 @@ import {
   MessageCircle,
   Globe,
   Database,
-  ArrowUpCircle
+  ArrowUpCircle,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
 import { getUserAvatarUrl } from '../../../utils/helpers/boringAvatarsUtils';
@@ -84,6 +88,10 @@ const UserManagement = ({
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortDirection, setSortDirection] = useState('desc');
   const [userDetailModal, setUserDetailModal] = useState(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   
   // League assignment modal state
   const [showLeagueModal, setShowLeagueModal] = useState(false);
@@ -190,6 +198,29 @@ const UserManagement = ({
 
   // Use filtered and sorted users
   const filteredUsers = filteredAndSortedUsers;
+  
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredUsers.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+  
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, roleFilter, migrationFilter, searchTerm, sortBy, sortDirection]);
+  
+  // Pagination handlers
+  const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+  
+  const handlePageSizeChange = (newSize) => {
+    setPageSize(newSize);
+    setCurrentPage(1);
+  };
 
   // Get user counts by status (excluding GRAND_PATHFINDER users)
   const eligibleUsers = users.filter(u => u.role !== 'GRAND_PATHFINDER');
@@ -338,10 +369,28 @@ const UserManagement = ({
             </div>
           </div>
           
-          <div className="mt-3">
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <p className="text-sm text-gray-600">
-              Showing <span className="font-medium">{filteredUsers.length}</span> of <span className="font-medium">{eligibleUsers.length}</span> users
+              Showing <span className="font-medium">{startIndex + 1}</span> to <span className="font-medium">{Math.min(endIndex, filteredUsers.length)}</span> of <span className="font-medium">{filteredUsers.length}</span> users
+              {filteredUsers.length !== eligibleUsers.length && (
+                <span className="text-gray-500"> (filtered from {eligibleUsers.length})</span>
+              )}
             </p>
+            
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">Show:</label>
+              <select
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm cursor-pointer"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-sm text-gray-600">per page</span>
+            </div>
           </div>
         </div>
       </div>
@@ -408,7 +457,7 @@ const UserManagement = ({
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((user) => {
+                paginatedUsers.map((user) => {
                   const roleInfo = getRoleInfo(user.role);
                   const RoleIcon = roleInfo.icon;
                   
@@ -594,6 +643,109 @@ const UserManagement = ({
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {filteredUsers.length > 0 && totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/50">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              {/* Page info */}
+              <div className="text-sm text-gray-600">
+                Page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{totalPages}</span>
+              </div>
+              
+              {/* Pagination buttons */}
+              <div className="flex items-center gap-1">
+                {/* First page */}
+                <button
+                  onClick={() => goToPage(1)}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="First page"
+                >
+                  <ChevronsLeft size={16} />
+                </button>
+                
+                {/* Previous page */}
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Previous page"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                
+                {/* Page numbers */}
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => goToPage(pageNum)}
+                        className={`min-w-[36px] h-9 px-3 rounded-lg transition-colors ${
+                          currentPage === pageNum
+                            ? 'bg-blue-600 text-white font-medium'
+                            : 'hover:bg-gray-200 text-gray-700'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                {/* Next page */}
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Next page"
+                >
+                  <ChevronRight size={16} />
+                </button>
+                
+                {/* Last page */}
+                <button
+                  onClick={() => goToPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Last page"
+                >
+                  <ChevronsRight size={16} />
+                </button>
+              </div>
+              
+              {/* Jump to page */}
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-600">Go to:</label>
+                <input
+                  type="number"
+                  min="1"
+                  max={totalPages}
+                  value={currentPage}
+                  onChange={(e) => {
+                    const page = parseInt(e.target.value);
+                    if (page >= 1 && page <= totalPages) {
+                      goToPage(page);
+                    }
+                  }}
+                  className="w-16 px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-center"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* User Detail Modal */}
